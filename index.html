@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html data-theme="dark" lang="de">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' http://127.0.0.1:3001 http://localhost:3001 https://esm.sh; frame-src 'self';">
+<title>Kynto Intel</title>
+
+<!-- CodeMirror -->
+<link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/monokai.min.css">
+<link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+<link  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+
+<!-- Policies RLS Styling -->
+<link rel="stylesheet" href="modules/Policies/policies.css">
+<link rel="stylesheet" href="modules/views/rls-policies/rls-policies.css">
+
+<style>
+/* ── Unified Design Tokens for all sidebars ────────────────────────── */
+:root {
+    --bg:         #18181b;
+    --surface:    #1f1f23;
+    --surface2:   #27272c;
+    --surface3:   #2e2e35;
+    --border:     rgba(58, 58, 66, 0.5);
+    --text:       #e8e8ee;
+    --muted:      #7a7a8c;
+    --accent:     #c29a40;
+    --accent-lo:  rgba(194, 154, 64, 0.1);
+    --accent-fade: rgba(194, 154, 64, 0.2);
+    --panel-shadow: -8px 0 8px rgba(0,0,0,0.2), -1px 0 0 rgba(255,255,255,0.06);
+    --panel-border: 1px solid rgba(255,255,255,0.11);
+    --error:      #e05555;
+    --success:    #4caf7d;
+    --warning:    #e6a817;
+    --info:       #5b9cf6;
+    --radius:     7px;
+    --radius-sm:  4px;
+    --radius-md:  6px;
+    --font-mono:  'Cascadia Code','Fira Code','Consolas',monospace;
+    --sidebar-w:  260px;
+    --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+html[data-theme="light"] {
+    --bg: #f4f4f5;
+    --surface: #ffffff;
+    --surface2: #f0f0f2;
+    --surface3: #e8e8eb;
+    --border: rgba(212, 212, 216, 0.5);
+    --text: #18181b;
+    --muted: #71717a;
+    --accent: #b08828;
+    --accent-lo: rgba(176,136,40,.1);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;display:flex;height:100vh;overflow:hidden;font-size:13px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────── */
+.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100%;transition:width .22s,min-width .22s,border-color .22s}
+.sidebar.collapsed{width:0;min-width:0;border-color:transparent}
+
+/* Sidebar-Sektionen: Basis */
+.sb-section{display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+
+/* Tabellen-Sektion: wächst und scrollt intern — KEIN max-height! */
+.sb-section.grow{flex:1 1 0;min-height:0;overflow:hidden}
+.sb-section.grow .sb-scroll{flex:1 1 0;min-height:0;overflow-y:auto;max-height:none}
+
+/* Favoriten + Verlauf: feste Höhe, nie wachsend */
+.sb-section.grow-half{flex:0 0 auto;min-height:0;max-height:150px}
+.sb-section.grow-half .sb-scroll{max-height:110px;overflow-y:auto}
+
+.sb-section.collapsed { flex-grow: 0 !important; }
+.sb-section.collapsed .sb-scroll { display: none; }
+
+.sb-header{padding:9px 12px 7px;font-size:10px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap}
+.sb-header.dim{color:var(--muted);border-top:1px solid var(--border);margin-top:2px}
+.sb-header .spacer{flex-grow:1}
+.sb-header .hbtn{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
+.sb-header .hbtn:hover{color:var(--accent);border-color:var(--accent)}
+.sb-header .hbtn-toggle { background:none; border:none; color:var(--muted); cursor:pointer; font-size:8px; transition: transform .2s; padding: 0 2px; line-height: 1; }
+.sb-section.collapsed .hbtn-toggle { transform: rotate(-90deg); }
+
+.sb-scroll{overflow-y:auto;padding:5px}
+.empty-list{padding:10px;color:var(--muted);font-size:11px;font-style:italic}
+
+/* DB items */
+.db-item{display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:6px;cursor:pointer;color:var(--muted);font-size:12px;transition:background .15s,color .15s;border:1px solid transparent}
+.db-item:hover{background:var(--surface2);color:var(--text)}
+.db-item.active{background:var(--accent-lo);border-color:var(--accent);color:var(--text)}
+.db-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .15s}
+.db-item.active .db-dot{background:var(--success)}
+.db-name{flex-grow:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:1px 4px;border-radius:3px;line-height:1}
+.db-close:hover{color:var(--error)}
+.db-rename{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:1px 4px;border-radius:3px;line-height:1;opacity:0;transition:opacity .15s}
+.db-item:hover .db-rename{opacity:1}
+.db-rename:hover{color:var(--accent)}
+
+/* Table items */
+.table-item{display:flex;align-items:center;padding:7px 8px;border-radius:6px;color:var(--muted);transition:background .15s,color .15s;gap:4px}
+.table-item:hover{background:var(--surface2);color:var(--text)}
+.table-item.active{background:var(--accent-lo);border:1px solid var(--accent);color:var(--text)}
+.table-item.active .table-name{color:var(--accent);font-weight:600}
+.table-name{cursor:pointer;flex-grow:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.table-actions{display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.table-item:hover .table-actions{opacity:1}
+.action-btn{cursor:pointer;font-size:12px;padding:2px 3px;border-radius:3px;transition:transform .1s}
+.action-btn:hover{transform:scale(1.2)}
+.action-btn:active{transform:scale(0.9)}
+
+/* Favorites */
+.fav-item{display:flex;align-items:center;padding:7px 8px;border-radius:6px;color:var(--muted);gap:5px;transition:background .15s,color .15s,transform .1s}
+.fav-item:hover{background:var(--surface2);color:var(--text)}
+.fav-item:active{transform:scale(0.98);background:var(--accent-lo)}
+.fav-name{cursor:pointer;flex-grow:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fav-del{cursor:pointer;font-size:11px;opacity:0;transition:opacity .15s}
+.fav-item:hover .fav-del{opacity:1}
+
+/* History */
+.hist-item{padding:6px 8px;border-radius:5px;border:1px solid transparent;cursor:pointer;margin-bottom:2px;transition:background .15s,border-color .15s,transform .1s}
+.hist-item:hover{background:var(--accent-lo);border-color:var(--accent)}
+.hist-item:active{transform:scale(0.98);opacity:0.8}
+.hist-item code{font-family:var(--font-mono);font-size:10px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-item:hover code{color:var(--text)}
+
+/* Import area */
+.import-area{padding:8px;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+#drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:11px;text-align:center;color:var(--muted);font-size:11px;cursor:pointer;transition:border-color .2s,background .2s,color .2s}
+#drop-zone:hover,#drop-zone.drag-over{border-color:var(--accent);background:var(--accent-lo);color:var(--text)}
+.import-btns{display:flex;gap:5px;margin-top:6px}
+.import-btns .btn{flex:1;font-size:10px;padding:4px;text-align:center}
+
+/* ── Main ────────────────────────────────────────────────────────────── */
+.main{flex-grow:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* Header */
+header{padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;position:relative;z-index:100}
+.logo{font-size:1.05rem;font-weight:700;color:var(--accent);letter-spacing:-.5px;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:5px;transition:background .15s,color .15s}
+.logo:hover{background:var(--surface2);color:var(--text)}
+.logo span{font-weight:300;color:var(--text)}
+.spacer{flex-grow:1}
+#header-info{font-size:11px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* SQL Tabs */
+#sql-tabs-bar{display:flex;align-items:stretch;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;padding:0;gap:2px;padding:0 4px}
+#sql-tabs-bar::-webkit-scrollbar{height:3px}
+#sql-tabs-bar::-webkit-scrollbar-thumb{background:var(--border)}
+
+.sql-tab{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:5px 5px 0 0;background:var(--surface2);color:var(--muted);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;border:1px solid transparent;border-bottom:none;user-select:none}
+.sql-tab:hover{color:var(--text);background:var(--surface)}
+.sql-tab.active{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom-color:var(--bg)}
+.sql-tab.dragging{opacity:0.5;background:var(--accent-lo)}
+
+.tab-title{overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.tab-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;border-radius:2px;transition:color .15s;flex-shrink:0}
+.tab-close:hover{color:var(--error)}
+
+.btn-new-tab{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 6px;align-self:center;transition:color .15s;line-height:1;border-radius:3px;margin-left:auto}
+.btn-new-tab:hover{color:var(--accent)}
+
+/* Editor area */
+.editor-area{padding:12px 16px 0;display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.action-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 10px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+/* Buttons & inputs */
+select,input[type="text"]{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 9px;border-radius:5px;outline:none;font-size:12px;transition:border-color .15s;font-family:inherit}
+select:focus,input[type="text"]:focus{border-color:var(--accent)}
+.btn{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 11px;border-radius:5px;cursor:pointer;font-size:12px;white-space:nowrap;transition:border-color .15s,color .15s;font-family:inherit}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent);color:var(--bg);border:none;padding:6px 16px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.btn-primary:hover{opacity:.88}
+.btn-icon{background:none;border:none;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:5px;transition:background .15s;line-height:1;color:var(--text)}
+.btn-icon:hover{background:var(--surface2)}
+
+/* CodeMirror wrapper */
+#editor-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .15s}
+#editor-wrap:focus-within{border-color:var(--accent)}
+.CodeMirror{height:110px;font-family:var(--font-mono);font-size:13px;line-height:1.6}
+.CodeMirror-scroll{overflow-y:auto!important}
+/* Fallback textarea */
+#sql-fallback{width:100%;height:110px;background:var(--surface2);border:none;color:var(--accent);padding:11px 13px;font-family:var(--font-mono);font-size:13px;resize:none;outline:none;line-height:1.6;display:none}
+
+/* Controls row */
+.controls{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px}
+.controls-left{display:flex;align-items:center;gap:8px}
+#run-btn{background:var(--accent);color:var(--bg);border:none;padding:8px 20px;border-radius:6px;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .15s,transform .1s}
+#run-btn:hover{opacity:.88}
+#run-btn:active{transform:scale(.97)}
+#run-btn:disabled{opacity:.4;cursor:not-allowed}
+#status{font-size:12px;font-style:italic;color:var(--muted)}
+#status.error{color:var(--error)}
+#status.success{color:var(--success)}
+kbd{background:var(--surface2);padding:2px 6px;border-radius:4px;border:1px solid var(--border);font-size:11px}
+
+/* ── Results ─────────────────────────────────────────────────────────── */
+.results-wrap{flex-grow:1;overflow:hidden;margin:0 16px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);display:flex;flex-direction:column}
+.result-tabs-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.result-tab{background:none;border:1px solid transparent;color:var(--muted);padding:4px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-family:inherit;transition:color .15s,background .15s,border-color .15s}
+.result-tab:hover{color:var(--text);background:var(--surface2)}
+.result-tab.active{color:var(--accent);background:var(--accent-lo);border-color:var(--accent)}
+#result-info{font-size:11px;color:var(--muted)}
+.export-btns{display:flex;gap:5px}
+.export-btns .btn{font-size:11px;padding:3px 9px}
+
+.result-view{display:none;overflow:auto;min-height:0}
+.result-view.active{display:flex !important;flex-direction:column;flex:1;min-height:0;overflow:auto}
+
+/* Table view */
+#result-table-view.active{display:flex !important}
+#result-table-view table{width:100%;border-collapse:collapse}
+#result-table-view thead{position:sticky;top:0;z-index:2}
+#result-table-view th{background:var(--surface2);border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;text-align:left;min-width:90px;max-width:280px;user-select:none}
+#result-table-view th:last-child{border-right:none}
+.th-inner{display:flex;flex-direction:column}
+.th-label{display:flex;justify-content:space-between;align-items:center;padding:6px 9px 4px;cursor:pointer;gap:6px;transition:color .15s}
+.th-label:hover{color:var(--accent)}
+.th-label .col-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sort-ico{flex-shrink:0;opacity:.35;font-size:9px}
+.sort-active .sort-ico{opacity:1;color:var(--accent)}
+.filter-input{background:var(--bg);border:none;border-top:1px solid var(--border);color:var(--text);font-size:10px;padding:4px 9px;width:100%;outline:none;transition:background .15s;font-family:inherit}
+.filter-input:focus{background:var(--surface2)}
+.filter-input.has-val{color:var(--accent)}
+
+/* Filter focus dim */
+table.filter-active th:not(.fcol),table.filter-active td:not(.fcol){opacity:.2;transition:opacity .2s}
+table.filter-active th.fcol,table.filter-active td.fcol{opacity:1}
+
+#result-table-view td{padding:8px 9px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+#result-table-view td:last-child{border-right:none}
+#result-table-view td.null{color:var(--muted);font-style:italic}
+#result-table-view tr:last-child td{border-bottom:none}
+#result-table-view tr:hover td{background:var(--accent-lo)}
+
+/* Markierte Zeile */
+#result-table-view tr.selected-row td { background: var(--accent-lo) !important; }
+#result-table-view tr.selected-row td:first-child { background: var(--accent) !important; color: var(--bg) !important; }
+
+/* Chart view */
+#result-chart-view{flex-direction:column;gap:0}
+#result-chart-view.active{display:flex !important}
+.chart-controls{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.chart-canvas-wrap{position:relative;flex-grow:1;padding:14px;min-height:0}
+.chart-canvas-wrap canvas{max-height:100%}
+
+/* Schema view */
+#result-schema-view{flex-direction:column}
+#result-schema-view.active{display:flex !important}
+.schema-wrap{padding:16px;overflow-y:auto;flex-grow:1}
+.schema-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.schema-head h3{font-size:14px}
+.badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.schema-tbl{width:100%;border-collapse:collapse;margin-bottom:20px}
+.schema-tbl th{background:var(--surface2);padding:7px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);font-weight:600;text-align:left}
+.schema-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+.schema-tbl tr:last-child td{border-bottom:none}
+
+/* RLS Policies view */
+#result-rls-view{flex-direction:column}
+#result-rls-view.active{display:flex !important}
+
+.type-badge{background:var(--accent-lo);color:var(--accent);border:1px solid var(--accent);font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--font-mono)}
+.col-edit-input{background:var(--surface2);border:1px solid var(--accent);color:var(--text);padding:4px 8px;border-radius:4px;font-size:12px;font-family:var(--font-mono);outline:none;width:100%;max-width:180px}
+.add-col-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.add-col-box h4{font-size:12px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px}
+.add-col-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.add-col-row input,.add-col-row select{font-size:12px;padding:6px 10px}
+.checkbox-label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--muted);font-size:13px;padding:40px;text-align:center}
+.empty-state .icon{font-size:36px;opacity:.25}
+
+/* ── Modals ──────────────────────────────────────────────────────────── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;min-width:300px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal h3{font-size:11px;margin-bottom:4px;opacity:0.7;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.modal input[type="text"]{width:100%;margin-bottom:4px}
+.modal-hint{font-size:11px;color:var(--muted);margin-bottom:4px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+
+#cell-content-full {
+    background: var(--surface2); color: var(--text); padding: 10px; border-radius: 4px;
+    font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap;
+    word-wrap: break-word; overflow-wrap: break-word; overflow-y: auto; max-height: 75vh;
+    border: 1px solid rgba(128, 128, 128, 0.12); margin-top: 2px;
+    min-width: 100%;
+}
+
+
+.api-panel-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.api-panel-title {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 600; font-size: 13px; flex-grow: 1;
+}
+.api-icon { font-size: 16px; }
+.api-close-btn {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 20px; padding: 4px 6px;
+    border-radius: 4px; transition: color 0.15s, background 0.15s;
+    line-height: 1;
+}
+.api-close-btn:hover { color: var(--text); background: var(--surface2); }
+
+.api-panel-content {
+    flex: 1; overflow-y: auto; padding: 16px;
+}
+
+/* API Sections */
+.api-section {
+    margin-bottom: 16px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+.api-section:last-child { border-bottom: none; }
+.api-section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--accent); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+}
+.api-endpoint-count {
+    background: var(--accent-lo); color: var(--accent);
+    border: 1px solid var(--accent); padding: 2px 6px; border-radius: 3px;
+    font-size: 10px; font-weight: 600; margin-left: auto;
+}
+
+/* Status Box */
+.api-status-box {
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 12px; border-radius: 6px; display: flex; gap: 10px;
+    margin-bottom: 10px; align-items: flex-start;
+}
+.api-status-indicator {
+    font-size: 24px; flex-shrink: 0; line-height: 1;
+}
+.api-status-text { flex-grow: 1; }
+.api-status-label {
+    font-weight: 600; font-size: 12px; color: var(--text);
+}
+.api-status-detail {
+    font-size: 11px; color: var(--muted); margin-top: 2px;
+}
+
+/* Info Grid */
+.api-info-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-bottom: 10px;
+}
+.api-info-item {
+    background: var(--surface2); padding: 8px; border-radius: 4px;
+    border: 1px solid var(--border);
+}
+.api-info-label {
+    font-size: 10px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px;
+}
+.api-info-value {
+    font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+    word-break: break-all;
+}
+
+/* Buttons */
+.api-button-group {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-bottom: 8px;
+}
+.api-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 12px; border-radius: 5px;
+    cursor: pointer; font-size: 12px; font-weight: 500;
+    transition: all 0.15s; white-space: nowrap;
+}
+.api-btn:hover:not(:disabled) {
+    background: var(--accent-lo); border-color: var(--accent);
+    color: var(--accent);
+}
+.api-btn:active:not(:disabled) { transform: scale(0.98); }
+.api-btn:disabled {
+    opacity: 0.5; cursor: not-allowed;
+}
+.api-btn-primary {
+    background: var(--accent); color: var(--bg);
+    border-color: var(--accent);
+}
+.api-btn-primary:hover:not(:disabled) {
+    background: var(--accent); opacity: 0.85;
+}
+.api-btn-secondary {
+    background: var(--surface2);
+}
+.api-btn-outline {
+    border: 1px solid var(--accent); color: var(--accent);
+    background: transparent;
+}
+.api-btn-outline:hover:not(:disabled) {
+    background: var(--accent-lo);
+}
+.api-btn-link {
+    background: none; border: none; color: var(--info);
+    cursor: pointer; padding: 6px 0; font-size: 12px;
+    text-decoration: underline; transition: color 0.15s;
+}
+.api-btn-link:hover { color: var(--accent); }
+
+/* Form */
+.api-form-group {
+    margin-bottom: 12px;
+}
+.api-label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.api-input-group {
+    display: flex; flex-direction: column; gap: 4px;
+}
+.api-input {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 10px; border-radius: 4px;
+    font-size: 12px; font-family: var(--font-mono);
+}
+.api-input:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-lo);
+}
+.api-help-text {
+    font-size: 10px; color: var(--muted);
+}
+.api-checkbox {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; font-size: 12px; color: var(--muted);
+}
+.api-checkbox input[type="checkbox"] {
+    cursor: pointer; width: 14px; height: 14px;
+}
+
+/* Endpoints */
+.api-endpoints-list {
+    display: flex; flex-direction: column; gap: 8px;
+}
+.api-empty-message {
+    padding: 10px; text-align: center; font-size: 11px;
+    color: var(--muted); font-style: italic;
+}
+.api-endpoint-group {
+    display: flex; flex-direction: column; gap: 6px;
+}
+.api-endpoint-method {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+.api-endpoint-item {
+    background: var(--surface2); padding: 6px 8px; border-radius: 4px;
+    border: 1px solid var(--border); font-size: 11px;
+    display: flex; flex-direction: column; gap: 2px;
+}
+.api-endpoint-item code {
+    font-family: var(--font-mono); color: var(--accent);
+    word-break: break-all; font-size: 10px;
+}
+.api-endpoint-desc {
+    font-size: 10px; color: var(--muted);
+}
+.api-endpoint-more {
+    font-size: 10px; color: var(--muted); font-style: italic;
+    padding: 4px 0;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ── Cell Detail Modal ────────────────────────────────────────────── -->
+<div class="modal-bg" id="cell-modal">
+  <div class="modal" style="min-width: 350px; max-width: 550px; width: 50vw;">
+    <h3 id="cell-modal-title">Zellen-Details</h3>
+    <div id="cell-content-full"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="cell-modal-close">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+
+  <!-- DBs -->
+  <div class="sb-section" id="db-section">
+    <div class="sb-header">
+      Datenbanken
+      <div class="spacer"></div>
+      <button class="hbtn" id="btn-open-db"  title="DB-Datei öffnen">📂</button>
+      <button class="hbtn" id="btn-settings" title="Einstellungen">⚙️</button>
+    </div>
+    <div class="sb-scroll" id="db-list"></div>
+  </div>
+
+  <!-- Tables -->
+  <div class="sb-section grow">
+    <div class="sb-header dim">Tabellen</div>
+    <div class="sb-scroll" id="table-list"></div>
+  </div>
+
+  <!-- Favorites -->
+  <div class="sb-section grow-half">
+    <div class="sb-header dim" id="header-fav">
+      <button class="hbtn-toggle" id="btn-toggle-fav">▼</button>
+      ⭐ Favoriten
+      <span class="spacer"></span>
+      <span id="fav-count" class="badge">0</span>
+    </div>
+    <div class="sb-scroll" id="fav-list"></div>
+  </div>
+
+  <!-- History -->
+  <div class="sb-section grow-half">
+    <div class="sb-header dim" id="header-hist">
+      <button class="hbtn-toggle" id="btn-toggle-hist">▼</button>
+      SQL Verlauf
+      <span class="spacer"></span>
+      <button class="hbtn" id="btn-clear-history">Leeren</button>
+    </div>
+    <div class="sb-scroll" id="sql-history"></div>
+  </div>
+
+  <!-- Import -->
+  <div class="import-area">
+    <div id="drop-zone">📁 CSV importieren</div>
+    <div class="import-btns">
+      <button class="btn" data-fmt="json">JSON</button>
+      <button class="btn" data-fmt="excel">Excel</button>
+      <button class="btn" data-fmt="parquet">Parquet</button>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ── Main ───────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <header>
+    <button class="btn-icon" id="toggle-sidebar">☰</button>
+    <button class="logo" id="btn-dashboard-header" title="Dashboard (Datenbankübersicht)">🏠 Kynto <span>Intel</span></button>
+    <button class="btn-icon" id="btn-popout-sql" title="SQL-Editor ein/ausblenden">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+      </svg>
+    </button>
+    <button type="button" class="btn-icon" id="btn-open-storage" title="Storage Manager öffnen">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+        <polyline points="2 17 12 22 22 17"></polyline>
+        <polyline points="2 12 12 17 22 12"></polyline>
+      </svg>
+    </button>
+    <button type="button" class="btn-icon" id="btn-open-readme" title="Readme-Editor öffnen">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>
+    </button>
+    <button class="btn-icon" id="api-btn-instant" title="Instant API Control Panel">
+      ⚡
+    </button>
+    <div class="spacer"></div>
+    <div id="header-info">Bereit.</div>
+    <button class="btn-icon" id="theme-toggle" title="Theme wechseln">🌙</button>
+  </header>
+
+  <!-- SQL Tabs -->
+  <div id="sql-tabs-bar"></div>
+
+  <!-- Editor -->
+  <div class="editor-area">
+    <div id="editor-wrap">
+      <textarea id="sql-fallback" placeholder="SQL hier eingeben…"></textarea>
+    </div>
+    <div class="controls">
+      <div class="controls-left">
+        <button id="run-btn">▶ Ausführen</button>
+        <button class="btn" id="btn-save-fav">⭐ Favorit</button>
+        <span id="status">Bereit.</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">
+        <kbd>Ctrl+Enter</kbd> ausführen &nbsp;·&nbsp; <kbd>Ctrl+Space</kbd> Autocomplete
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-wrap">
+    <div class="result-tabs-bar">
+      <button class="result-tab active" data-view="table"><img src="../image/Vorlage.png" style="width:16px; height:16px; vertical-align:middle; margin-right:5px; object-fit:contain;"> Tabelle</button>
+      <button class="result-tab"        data-view="chart">📈 Chart</button>
+      <button class="result-tab"        data-view="schema">🔧 Schema</button>
+      <button class="result-tab"        data-view="rls-policies">🔒 RLS-Richtlinien</button>
+      <div class="spacer"></div>
+      <span id="result-info">Kein Ergebnis.</span>
+      <div class="spacer"></div>
+      <div class="export-btns" id="export-btns" style="display:none">
+        <button class="btn" id="exp-csv">CSV</button>
+        <button class="btn" id="exp-json">JSON</button>
+        <button class="btn" id="exp-sql">SQL-Dump</button>
+      </div>
+    </div>
+
+    <!-- Action-Bar über der Tabelle -->
+    <div class="action-bar" id="action-bar-container"></div>
+
+    <div id="result-table-view"  class="result-view active">
+      <div class="empty-state"><div class="icon">🦆</div><div>SQL ausführen, um Ergebnisse zu sehen.</div></div>
+    </div>
+    <div id="result-chart-view"  class="result-view">
+      <div class="empty-state"><div class="icon">📈</div><div>Zuerst eine Abfrage ausführen.</div></div>
+    </div>
+    <div id="result-schema-view" class="result-view">
+      <div class="empty-state"><div class="icon">🔧</div><div>Tabelle in der Sidebar auswählen.</div></div>
+    </div>
+    <div id="result-rls-view" class="result-view">
+      <div class="empty-state"><div class="icon">🔒</div><div>Tabelle in der Sidebar auswählen, um Richtlinien zu verwalten.</div></div>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<!-- ── Save Favorite Modal ──────────────────────────────────────────── -->
+<div class="modal-bg" id="fav-modal">
+  <div class="modal">
+    <h3>⭐ Als Favorit speichern</h3>
+    <input type="text" id="fav-name-input" placeholder="Name der Abfrage…">
+    <div class="modal-actions">
+      <button class="btn" id="fav-cancel">Abbrechen</button>
+      <button class="btn-primary" id="fav-confirm">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rename DB Modal ───────────────────────────────────────────────── -->
+<div class="modal-bg" id="rename-db-modal">
+  <div class="modal">
+    <h3>✏️ Datenbank umbenennen</h3>
+    <p class="modal-hint" id="rename-db-hint"></p>
+    <input type="text" id="rename-db-input" placeholder="Anzeigename…">
+    <div class="modal-actions">
+      <button class="btn" id="rename-db-cancel">Abbrechen</button>
+      <button class="btn-primary" id="rename-db-confirm">Umbenennen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rename Table Modal ───────────────────────────────────────────── -->
+<div class="modal-bg" id="rename-modal">
+  <div class="modal">
+    <h3>✏️ Tabelle umbenennen</h3>
+    <p class="modal-hint" id="rename-hint"></p>
+    <input type="text" id="rename-input" placeholder="Neuer Name…">
+    <div class="modal-actions">
+      <button class="btn" id="rename-cancel">Abbrechen</button>
+      <button class="btn-primary" id="rename-confirm">Umbenennen</button>
+    </div>
+  </div>
+</div>
+
+<!-- CDN: CodeMirror -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/sql-hint.min.js"></script>
+<!-- CDN: Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!-- React & ReactDOM CDN (UMD bundles) -->
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+
+<!-- Dialog Container für SpreadsheetImport und ForeignRowSelector -->
+<div id="dialog-container"></div>
+
+<!-- Instant API Panel JavaScript Module -->
+<script src="modules/instant-api-panel.js" defer></script>
+
+<!-- Import Dialog Components (React Components - built by webpack) -->
+<!-- WICHTIG: KEINE defer - synchron laden BEVOR app.js startet, damit window.DialogManager verfügbar ist -->
+<script src="dist/spreadsheet-import.js"></script>
+<script src="dist/foreign-row-selector.js"></script>
+<script src="dist/import-dialog.js"></script>
+
+<!-- Debug: Überprüfe ob DialogManager verfügbar ist -->
+<script>
+  console.log('[index.html] Nach dem Laden von import-dialog.js:');
+  console.log('[index.html] window.DialogManager:', !!window.DialogManager);
+  console.log('[index.html] window.SpreadsheetImport:', !!window.SpreadsheetImport);
+  console.log('[index.html] window.ForeignRowSelector:', !!window.ForeignRowSelector);
+  if (window.DialogManager) {
+    console.log('[index.html] DialogManager.spreadsheetImportOpen:', typeof window.DialogManager.spreadsheetImportOpen);
+    console.log('[index.html] DialogManager._spreadsheetImportVisible:', window.DialogManager._spreadsheetImportVisible);
+  }
+</script>
+
+<!-- Einstiegspunkt lädt Dashboard und Visualizer via Import -->
+<script type="module" src="modules/app.js"></script>
+
+<!-- Readme Editor Integration -->
+<iframe id="readme-editor-frame" src="modules/readme-editor/readme-editor.html" 
+        style="position: fixed; top: 0; right: 0; width: 640px; height: 100%; border: none; z-index: 2000; display: none; background: transparent;"
+        allowtransparency="true"></iframe>
+
+<!-- Storage Manager Integration -->
+<iframe id="storage-manager-frame" src="templates/storage.manager.html" 
+        style="position: fixed; top: 0; right: 0; width: 400px; height: 100%; border: none; z-index: 2000; display: none; background: transparent;"
+        allowtransparency="true"></iframe>
+
+<script>
+  // ══════════════════════════════════════════════════════════════════
+  // Hilfsfunktion: Header-Button aktiv/inaktiv stylen
+  // ══════════════════════════════════════════════════════════════════
+  function setHeaderBtnActive(btnId, active) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.style.color      = active ? 'var(--accent)' : '';
+    btn.style.background = active ? 'var(--accent-lo)' : '';
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // STORAGE MANAGER
+  // Schließen läuft komplett über den Parent-Button (kein postMessage
+  // nötig → funktioniert sicher in Electron + Browser)
+  // ══════════════════════════════════════════════════════════════════
+  (function initStorageManager() {
+    const frame      = document.getElementById('storage-manager-frame');
+    const btnOpen    = document.getElementById('btn-open-storage');
+    if (!frame || !btnOpen) return;
+
+    function openStorage() {
+      frame.style.display    = 'block';
+      setHeaderBtnActive('btn-open-storage', true);
+    }
+
+    function closeStorage() {
+      frame.style.display    = 'none';
+      setHeaderBtnActive('btn-open-storage', false);
+    }
+
+    // Ein Klick öffnet, nochmal schließt
+    btnOpen.addEventListener('click', () => {
+      frame.style.display === 'block' ? closeStorage() : openStorage();
+    });
+
+    // Zusätzlich: postMessage vom Iframe als Fallback
+    window.addEventListener('message', (e) => {
+      if (e.data === 'close-storage-manager') closeStorage();
+    });
+
+    // Electron-Events
+    window.electronAPI?.onShowStorageManager?.(() => openStorage());
+    window.electronAPI?.onHideStorageManager?.(() => closeStorage());
+  })();
+
+  // ══════════════════════════════════════════════════════════════════
+  // README EDITOR
+  // ══════════════════════════════════════════════════════════════════
+  (function initReadmeEditor() {
+    const readmeFrame = document.getElementById('readme-editor-frame');
+    const readmeBtn   = document.getElementById('btn-open-readme');
+    if (!readmeFrame || !readmeBtn) return;
+
+    function openReadme() {
+      readmeFrame.style.display = 'block';
+      setHeaderBtnActive('btn-open-readme', true);
+      const send = () => {
+        try { readmeFrame.contentWindow?.postMessage({ action: 'open-readme' }, '*'); } catch(e) {}
+      };
+      send();
+      readmeFrame.addEventListener('load', send, { once: true });
+    }
+
+    function closeReadme() {
+      readmeFrame.style.display = 'none';
+      setHeaderBtnActive('btn-open-readme', false);
+    }
+
+    readmeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      // Status direkt über das style-Attribut prüfen (verhindert Out-of-Sync)
+      if (readmeFrame.style.display === 'block') {
+        closeReadme();
+      } else {
+        openReadme();
+      }
+    });
+
+    window.addEventListener('message', (e) => {
+      if (e.data === 'close-readme-editor' || e.data?.action === 'close-readme') closeReadme();
+    });
+  })();
+</script>
+
+<style>
+/* Hilfsklasse für JS-gesteuertes Feedback */
+.item-load-flash { animation: flash-accent 0.6s ease-out; }
+@keyframes flash-accent {
+    0% { background: var(--accent); color: var(--bg); }
+    100% { background: transparent; }
+}
+
+/* ── Sidebar Layout: !important-Overrides gegen sidebar.js-Injection ───
+   sidebar.js injiziert dynamisch einen <style id="sidebar-layout-fix">
+   der .sb-section { flex-shrink: 0 } setzt und alles kaputt macht.
+   Diese Regeln hier gewinnen durch Spezifität + !important.
+   ──────────────────────────────────────────────────────────────────── */
+#sidebar { display:flex !important; flex-direction:column !important; height:100% !important; overflow:hidden !important; }
+
+/* DB-Sektion: sichtbar aber begrenzt */
+#db-section { flex:0 0 auto !important; min-height:36px !important; max-height:220px !important; display:flex !important; flex-direction:column !important; overflow:hidden !important; }
+#db-list { flex: 1 1 auto !important; overflow-y:auto !important; }
+
+/* Tabellen-Sektion: wächst, scrollt intern, KEIN max-height */
+#sidebar .sb-section.grow { flex:1 1 0 !important; min-height:100px !important; overflow:hidden !important; display:flex !important; flex-direction:column !important; }
+#table-list { flex:1 1 0 !important; min-height:0 !important; max-height:none !important; overflow-y:auto !important; }
+
+/* Favoriten + Verlauf: feste kleine Höhe */
+#sidebar .sb-section.grow-half { flex:0 0 auto !important; max-height:150px !important; overflow:hidden !important; }
+#sidebar .sb-section.grow-half .sb-scroll { max-height:110px !important; overflow-y:auto !important; }
+
+/* Import: immer am Boden */
+#sidebar .import-area { flex-shrink:0 !important; }
+</style>
+</body>
+</html>
