@@ -12,11 +12,25 @@ Kynto is a lightweight database client built for developers who want control. Ru
 
 Tired of cloud databases taking a cut? Kynto runs entirely on your laptop. Connect to **PostgreSQL**, use embedded **PGlite**, or sync local data. Write SQL, explore schemas, generate APIs—no terminal wizardry required.
 
+Supabase started as the open-source alternative to Firebase, but they eventually ended up in the same place: the Cloud. If you want real control, you still have to rent their infrastructure.
+
+**The Problem:** Platforms like Firebase and Supabase tie you to their servers. You are trading vendor lock-in for cloud dependency. The latency remains, monthly costs scale with your success, and your data sovereignty ends at their API.
+
+**The Solution:** Kynto is the local-first alternative.
+
+I built Kynto to bring the speed and simplicity of these platforms to your own machine (or your own server). You can use your own PostgreSQL instance without a third party sitting between you and your data.
+
+This isn't just about being another database tool—it's about decoupling the modern developer workflow from the cloud and making it available locally. Full infrastructure control, zero cloud latency, and true data sovereignty.
+
+Kynto is currently in Beta, and I’m looking for feedback from anyone who wants to own their infrastructure again. What is your biggest pain point when trying to move away from managed cloud databases?
+
 **We're just getting started.** Expect rough edges, but also expect simplicity.
 
 ---
 
 ## Why Local First?
+
+Firebase is a black box. We are local and open source.
 
 **Kynto vs Supabase.** Simple story:
 
