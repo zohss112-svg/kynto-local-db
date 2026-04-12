@@ -6,6 +6,8 @@ Kynto is a lightweight database client built for developers who want control. Ru
 
 **[→ Getting Started](#quick-start)** • [→ Why Kynto?](#why-local-first) • Development Stage: **Beta**
 
+![Kynto Screenshot](image/Screenshot%202026-04-12%20025651.png)
+
 ---
 
 ## What is Kynto?
@@ -25,9 +27,6 @@ This isn't just about being another database tool—it's about decoupling the mo
 Kynto is currently in Beta, and I’m looking for feedback from anyone who wants to own their infrastructure again. What is your biggest pain point when trying to move away from managed cloud databases?
 
 **We're just getting started.** Expect rough edges, but also expect simplicity.
-
-
-![Screenshot 2026-04-12 025651.png][img_1dbwz7l]
 
 ---
 
